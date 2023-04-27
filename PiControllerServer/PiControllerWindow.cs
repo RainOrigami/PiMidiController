@@ -40,7 +40,12 @@ namespace PiControllerServer
             this.midi.ColorEventReceived += this.Midi_ColorEventReceived;
 
             // Server
-            this.server = new Server(1337);
+            int port = 14817;
+            if (Environment.GetCommandLineArgs().Length > 1)
+            {
+                int.TryParse(Environment.GetCommandLineArgs()[1], out port);
+            }
+            this.server = new Server(port);
             this.server.ClientConnected += this.Server_ClientConnected;
             this.server.NoteReceived += this.Server_NoteReceived;
         }

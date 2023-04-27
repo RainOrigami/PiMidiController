@@ -11,8 +11,14 @@ namespace PiControllerClient
     {
         public static void Main(string[] args)
         {
+            if (args.Length != 2 || !int.TryParse(args[1], out int port))
+            {
+                Console.WriteLine("Usage: PiControllerClient.exe <host> <port>");
+                return;
+            }
+
             Application.Init();
-            var win = new MainWindow();
+            var win = new MainWindow(args[0], port);
             win.ShowAll();
             Application.Run();
         }

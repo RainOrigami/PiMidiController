@@ -19,11 +19,13 @@ namespace PiControllerClient
         private Notebook notebook;
         private Dictionary<ControlDefinition, Widget> allControls = new Dictionary<ControlDefinition, Widget>();
 
-        public MainWindow() : base(WindowType.Toplevel)
+        public MainWindow(string host, int port) : base(WindowType.Toplevel)
         {
             this.Shown += this.MainWindow_Shown;
 
             Gtk.Application.Invoke(delegate { initialise(); });
+            this.host = host;
+            this.port = port;
         }
 
         private void initialise()
@@ -66,7 +68,7 @@ namespace PiControllerClient
 #endif
 
             Console.WriteLine("Ready and connecting");
-            this.connection = new Connection("192.168.178.23", 1337);
+            this.connection = new Connection(host, port);
             this.connection.PageDefinitionsReceived += this.Connection_PageDefinitionsReceived;
             this.connection.ValueReceived += this.Connection_ValueReceived;
             this.connection.ColorReceived += this.Connection_ColorReceived;
@@ -94,6 +96,8 @@ namespace PiControllerClient
         }
 
         Dictionary<Guid, CssProvider> activeProviders = new();
+        private readonly string host;
+        private readonly int port;
 
         private void updateColor(Guid controlId, byte red, byte green, byte blue)
         {
