@@ -191,7 +191,7 @@ namespace PiControllerClient
                             {
                                 Vexpand = true,
                                 Hexpand = true,
-                                Value = 100
+                                Value = (knobControlDefinition.Centered ? (knobControlDefinition.Max - knobControlDefinition.Min) / 2 + 1: knobControlDefinition.Max)
                             };
 
                             turnKnob.ValueChanged += (sender, args) => OnKnobTurned(sender, args, controlDefinition.Id);
