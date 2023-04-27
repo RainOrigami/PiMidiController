@@ -275,5 +275,16 @@ namespace PiControllerServer
                 await Console.Out.WriteLineAsync($"Unhandled midi event: {e.CommandCode}");
             }
         }
+
+        private void btnRemoveTab_Click(object sender, EventArgs e)
+        {
+            if (this.lbTabs.SelectedItem == null)
+            {
+                return;
+            }
+
+            this.tabs.Remove((TabDefiner)this.lbTabs.SelectedItem);
+            scDefiners.Panel2.Controls.Clear();
+        }
     }
 }

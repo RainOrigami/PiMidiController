@@ -132,6 +132,7 @@
             this.btnRemoveTab.TabIndex = 1;
             this.btnRemoveTab.Text = "Remove";
             this.btnRemoveTab.UseVisualStyleBackColor = true;
+            this.btnRemoveTab.Click += this.btnRemoveTab_Click;
             // 
             // btnAddTab
             // 
