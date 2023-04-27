@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33516.290
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PiControllerServer", "PiControllerServer\PiControllerServer.csproj", "{47879422-7D93-4DDB-B920-6BA1A3A887CA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PiControllerClient", "PiControllerClient\PiControllerClient.csproj", "{9028A016-74EA-47B9-B1E0-1FB1C945A400}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PiControllerShared", "PiControllerShared\PiControllerShared.csproj", "{59B1D75E-2CE9-4546-9DB3-C5102E44260F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{47879422-7D93-4DDB-B920-6BA1A3A887CA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{47879422-7D93-4DDB-B920-6BA1A3A887CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{47879422-7D93-4DDB-B920-6BA1A3A887CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{47879422-7D93-4DDB-B920-6BA1A3A887CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9028A016-74EA-47B9-B1E0-1FB1C945A400}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9028A016-74EA-47B9-B1E0-1FB1C945A400}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9028A016-74EA-47B9-B1E0-1FB1C945A400}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9028A016-74EA-47B9-B1E0-1FB1C945A400}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59B1D75E-2CE9-4546-9DB3-C5102E44260F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59B1D75E-2CE9-4546-9DB3-C5102E44260F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59B1D75E-2CE9-4546-9DB3-C5102E44260F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59B1D75E-2CE9-4546-9DB3-C5102E44260F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3733DC0E-62FD-4BE7-850C-B67A28363BA6}
+	EndGlobalSection
+EndGlobal

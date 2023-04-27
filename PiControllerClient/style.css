@@ -1,0 +1,133 @@
+* {
+    
+    background-color: transparent;
+}
+
+window {
+    background-color: black;
+}
+
+button {
+    background-image: none;
+    background-color: black;
+    border: 1px solid white;
+    text-shadow: none;
+    color: white;
+    padding: 0;
+}
+
+    button:active {
+        background-color: red;
+    }
+
+    button > label {
+        margin: 0;
+        padding: 0;
+        border: 1px solid red;
+        /*font-size: 24pt;*/
+    }
+
+notebook {
+    background-image: none;
+    background-color: black;
+    border: none;
+}
+
+    notebook tab label {
+        color: white;
+    }
+
+    notebook tabs {
+        background-color: black;
+    }
+
+    notebook tab {
+        background-color: black;
+        padding-top: 25px;
+        padding-bottom: 25px;
+        padding-right: 25px;
+        margin-bottom: 10px;
+    }
+
+        notebook tab:checked {
+            background-color: darkgreen;
+        }
+
+        notebook tab > label {
+            font-size: 36px;
+        }
+
+grid {
+    background-color: black;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.turn-knob {
+    background-color: black;
+    color: white;
+}
+
+.note-color-0 {
+    background-color: black;
+}
+
+.note-color-1 {
+    background-color: red;
+}
+
+.note-color-2 {
+    background-color: green;
+}
+
+.note-color-3 {
+    background-color: blue;
+}
+
+.note-color-4 {
+    background-color: yellow;
+}
+
+    .note-color-4 label {
+        color: black;
+    }
+
+.note-color-5 {
+    background-color: purple;
+}
+
+.note-color-6 {
+    background-color: cyan;
+}
+
+    .note-color-6 label {
+        color: black;
+    }
+
+.note-color-7 {
+    background-color: orange;
+}
+
+    .note-color-7 label {
+        color: black;
+    }
+
+.note-color-8 {
+    background-color: brown;
+}
+
+.note-color-9 {
+    background-color: white;
+}
+
+    .note-color-9 label {
+        color: black;
+    }
+
+.note-color-10 {
+    background-color: gray;
+}
+
+    .note-color-10 label {
+        color: black;
+    }
