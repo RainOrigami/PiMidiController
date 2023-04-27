@@ -20,6 +20,7 @@ namespace PiControllerClient
 
         public event EventHandler<PageDefinition[]>? PageDefinitionsReceived;
         public event EventHandler<(Guid controlId, int value)>? ValueReceived;
+        public event EventHandler<(Guid controlId, int red, int green, int blue)>? ColorReceived;
 
         public Connection(string host, int port)
         {
@@ -90,32 +91,32 @@ namespace PiControllerClient
                     }
                     Console.WriteLine("Data received.");
 
-                    try
+                    MessageData? messageData = JsonConvert.DeserializeObject<MessageData>(receivedData, new JsonSerializerSettings()
                     {
-                        PageDefinition[]? definitions = JsonConvert.DeserializeObject<PageDefinition[]>(receivedData, new JsonSerializerSettings()
-                        {
-                            TypeNameHandling = TypeNameHandling.All
-                        });
+                        TypeNameHandling = TypeNameHandling.All,
+                    });
 
-                        if (definitions != null)
-                        {
-                            Console.WriteLine("Received new definition");
-                            this.PageDefinitionsReceived?.Invoke(this, definitions);
+                    if (messageData == null)
+                    {
+                        await Console.Out.WriteLineAsync("Received invalid message data");
+                        continue;
+                    }
+
+                    switch (messageData)
+                    {
+                        case PageDefinitionsMessageData pageDefinitionsMessageData:
+                            this.PageDefinitionsReceived?.Invoke(this, pageDefinitionsMessageData.Definitions);
                             continue;
-                        }
+                        case ColorMessageData colorMessageData:
+                            this.ColorReceived?.Invoke(this, (colorMessageData.ControlId, colorMessageData.Red, colorMessageData.Green, colorMessageData.Blue));
+                            continue;
+                        case ValueMessageData valueMessageData:
+                            this.ValueReceived?.Invoke(this, (valueMessageData.ControlId, valueMessageData.Value));
+                            continue;
+                        default:
+                            await Console.Out.WriteLineAsync("Unmapped message data received");
+                            break;
                     }
-                    catch { }
-
-                    try
-                    {
-                        Guid controlId = Guid.Empty;
-                        (controlId, int value) = JsonConvert.DeserializeObject<(Guid, int)>(receivedData);
-                        if (controlId != Guid.Empty)
-                        {
-                            this.ValueReceived?.Invoke(this, (controlId, value));
-                        }
-                    }
-                    catch { }
 
                 }
                 catch (Exception ex)

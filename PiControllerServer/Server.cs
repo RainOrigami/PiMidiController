@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using PiControllerShared;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -83,10 +84,15 @@ namespace PiControllerServer
 
         public async Task SendNote(Guid controlId, int value)
         {
-            await SendRaw((controlId, value));
+            await SendRaw(new ValueMessageData(controlId, value));
         }
 
-        public async Task SendRaw(object data)
+        public async Task SendColor(Guid controlId, int red, int green, int blue)
+        {
+            await SendRaw(new ColorMessageData(controlId, red, green, blue));
+        }
+
+        public async Task SendRaw(MessageData data)
         {
             List<Task> sendingTasks = new List<Task>();
             foreach (KeyValuePair<Guid, TcpClient> connection in this.connections)
@@ -96,7 +102,7 @@ namespace PiControllerServer
             await Task.WhenAll(sendingTasks);
         }
 
-        public async Task SendRaw(Guid clientGuid, object data)
+        public async Task SendRaw(Guid clientGuid, MessageData data)
         {
             if (this.connections.TryGetValue(clientGuid, out TcpClient? client) == false)
             {
