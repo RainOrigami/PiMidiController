@@ -57,7 +57,6 @@ namespace PiControllerServer
                     {
                         lbSoftStops.Items.Add(softStop);
                     }
-                    lbSoftStops.SelectedIndex = 0;
 
                     break;
                 default:
