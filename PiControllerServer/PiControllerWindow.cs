@@ -19,6 +19,7 @@ namespace PiControllerServer
         private BindingList<TabDefiner> tabs = new BindingList<TabDefiner>();
         private List<PageDefinition> definitions;
         private Dictionary<int, MidiEvent> lastEvents = new();
+        private Dictionary<int, (int red, int green, int blue)> lastColors = new();
 
         private Midi midi;
         private Server server;
@@ -36,6 +37,7 @@ namespace PiControllerServer
             // Midi
             this.midi = new Midi("Pi Midi Controller");
             this.midi.MidiEventReceived += this.Midi_MidiEventReceived;
+            this.midi.ColorEventReceived += this.Midi_ColorEventReceived;
 
             // Server
             this.server = new Server(1337);
@@ -151,7 +153,7 @@ namespace PiControllerServer
             }
 
             this.saveDefinitionsToFile(definitionsFileName, this.definitions.ToArray());
-            await this.server.SendRaw(this.definitions.ToArray());
+            await this.server.SendRaw(new PageDefinitionsMessageData(this.definitions.ToArray()));
             foreach (MidiEvent lastEvent in this.lastEvents.Values.ToArray())
             {
                 await relayEvent(lastEvent);
@@ -160,7 +162,7 @@ namespace PiControllerServer
 
         private async void Server_ClientConnected(object? sender, Guid e)
         {
-            await this.server.SendRaw(e, this.definitions.ToArray());
+            await this.server.SendRaw(e, new PageDefinitionsMessageData(this.definitions.ToArray()));
             foreach (MidiEvent lastEvent in this.lastEvents.Values)
             {
                 await relayEvent(lastEvent);
@@ -200,6 +202,24 @@ namespace PiControllerServer
         private async void Midi_MidiEventReceived(object? sender, MidiEvent e)
         {
             await relayEvent(e);
+        }
+
+        private async void Midi_ColorEventReceived(object? sender, (int note, int red, int green, int blue) e)
+        {
+            ControlDefinition? control = this.definitions.SelectMany(d => d.Controls).FirstOrDefault(c => c.Note == e.note);
+            if (control is null)
+            {
+                Console.WriteLine($"Invalid control note {e.note}");
+                return;
+            }
+
+            await this.server.SendColor(control.Id, e.red, e.green, e.blue);
+
+            if (lastColors.ContainsKey(e.note))
+            {
+                lastColors.Remove(e.note);
+            }
+            lastColors.Add(e.note, (e.red, e.green, e.blue));
         }
 
         private async Task relayEvent(MidiEvent e)

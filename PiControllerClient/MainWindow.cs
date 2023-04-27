@@ -69,6 +69,12 @@ namespace PiControllerClient
             this.connection = new Connection("192.168.178.23", 1337);
             this.connection.PageDefinitionsReceived += this.Connection_PageDefinitionsReceived;
             this.connection.ValueReceived += this.Connection_ValueReceived;
+            this.connection.ColorReceived += this.Connection_ColorReceived;
+        }
+
+        private void Connection_ColorReceived(object? sender, (Guid controlId, int red, int green, int blue) e)
+        {
+            Application.Invoke(delegate { updateColor(e.controlId, (byte)(e.red * 2), (byte)(e.green * 2), (byte)(e.blue * 2)); });
         }
 
         private void Connection_ValueReceived(object? sender, (Guid controlId, int value) e)
@@ -84,17 +90,38 @@ namespace PiControllerClient
                 {
                     turnKnob.Value = value;
                 }
-                else if (control is Button button)
+            }
+        }
+
+        Dictionary<Guid, CssProvider> activeProviders = new();
+
+        private void updateColor(Guid controlId, byte red, byte green, byte blue)
+        {
+            foreach (KeyValuePair<ControlDefinition, Widget> control in allControls.Where(kvp => kvp.Key.Id == controlId))
+            {
+                if (control.Value is Button button)
                 {
-                    string[] classes = button.StyleContext.ListClasses();
-                    foreach (string className in classes)
+                    byte foregroundRed = 255;
+                    byte foregroundGreen = 255;
+                    byte foregroundBlue = 255;
+                    int brightness = (int)Math.Round((red * 299.0 + green * 587 + blue * 114) / 1000);
+                    if (brightness > 125)
                     {
-                        if (className.StartsWith("note-color-"))
-                        {
-                            button.StyleContext.RemoveClass(className);
-                        }
+                        foregroundRed = 0;
+                        foregroundGreen = 0;
+                        foregroundBlue = 0;
                     }
-                    button.StyleContext.AddClass($"note-color-{value}");
+
+                    if (this.activeProviders.ContainsKey(controlId))
+                    {
+                        button.StyleContext.RemoveProvider(this.activeProviders[controlId]);
+                        this.activeProviders.Remove(controlId);
+                    }
+
+                    CssProvider cssProvider = new CssProvider();
+                    cssProvider.LoadFromData($".note-{control.Key.Note} {{ background-color: rgb({red}, {green}, {blue}); color: rgb({foregroundRed}, {foregroundGreen}, {foregroundBlue}); }}");
+                    button.StyleContext.AddProvider(cssProvider, Gtk.StyleProviderPriority.User);
+                    this.activeProviders.Add(controlId, cssProvider);
                 }
             }
         }
