@@ -16,8 +16,6 @@ namespace PiControllerClient
         private readonly int port;
         private TcpClient? client;
 
-        //private readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-
         public event EventHandler<PageDefinition[]>? PageDefinitionsReceived;
         public event EventHandler<(Guid controlId, int value)>? ValueReceived;
         public event EventHandler<(Guid controlId, int red, int green, int blue)>? ColorReceived;
@@ -28,7 +26,6 @@ namespace PiControllerClient
             this.port = port;
 
             Task.Run(handle);
-            //new Thread(new ThreadStart(handle)).Start();
         }
 
         public async Task SendButton(Guid controlId, bool on)
@@ -75,7 +72,6 @@ namespace PiControllerClient
 
             StreamReader streamReader = new(this.client.GetStream());
 
-            //while (!cancellationTokenSource.Token.IsCancellationRequested)
             while (true)
             {
                 try
@@ -88,7 +84,6 @@ namespace PiControllerClient
                         await Task.Delay(1);
                         continue;
                     }
-                    Console.WriteLine("Data received.");
 
                     MessageData? messageData = JsonConvert.DeserializeObject<MessageData>(receivedData, new JsonSerializerSettings()
                     {
@@ -129,9 +124,7 @@ namespace PiControllerClient
 
         private async Task connect()
         {
-            Console.WriteLine("Connect called from");
-            Console.WriteLine(Environment.StackTrace);
-            //while (!cancellationTokenSource.Token.IsCancellationRequested)
+            Console.WriteLine("Connecting...");
             while (true)
             {
                 try
@@ -154,10 +147,8 @@ namespace PiControllerClient
 
         public void Dispose()
         {
-            //this.cancellationTokenSource.Cancel();
             this.client?.Close();
             this.client?.Dispose();
-            //this.cancellationTokenSource.Dispose();
         }
     }
 }
