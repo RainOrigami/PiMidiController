@@ -138,8 +138,7 @@ A knob displays the percentage of the current value between the minimum and maxi
 
 To use the controller with VoiceMeeter, you need to add the midi device "Pi Midi Controller" to VoiceMeeter.  
 Go to Menu -> M.I.D.I. Mapping and select the "Pi Midi Controller" device as your M.I.D.I. Input Device. You can now map the controls to VoiceMeeter.  
-The Pi Midi Controller also supports feedback, so you can set it as the M.I.D.I. Output Device to get feedback from VoiceMeeter. This will show the current value of the control on the controller.  
-**Warning**: There seems to be a bug in VoiceMeeter feedback that causes VoiceMeeter to only send the feedback of the first two controls upon startup. This will initialise only two knobs to the correct value, all others are set to 100 by default. You can write in the VoiceMeeter forums to ask them to fix this bug [here (to be done)](https://forum.vb-audio.com/).
+The Pi Midi Controller also supports feedback, so you can set it as the M.I.D.I. Output Device and set F on the corresponding mappings to get feedback from VoiceMeeter. This will show the current value of the control on the controller and initialise the UI with the correct values from VoiceMeeter.  
 
 For use in MacroButtons you can open the context menu of the MacroButtons window and select "Pi Midi Controller" as the MIDI OUT1 or OUT2 device. This will allow you to send midi events to the controller, to set button colors or knob positions.
 
