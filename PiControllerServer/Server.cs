@@ -43,15 +43,19 @@ namespace PiControllerServer
 
             this.ClientConnected?.Invoke(this, clientGuid);
 
-            using (NetworkStream stream = client.GetStream())
+            using (StreamReader stream = new StreamReader(client.GetStream()))
             {
                 try
                 {
                     byte[] buffer = new byte[1024];
                     while (true)
                     {
-                        int read = await stream.ReadAsync(buffer, 0, buffer.Length);
-                        string data = Encoding.UTF8.GetString(buffer, 0, read);
+                        string? data = await stream.ReadLineAsync();
+
+                        if (data == null)
+                        {
+                            throw new Exception("Lost connection to client");
+                        }
 
                         if (data.Length < 38)
                         {
