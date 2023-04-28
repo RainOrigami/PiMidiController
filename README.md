@@ -116,6 +116,7 @@ The control type determines the type of control. The following types are availab
 - Blank: Does not show a control on the controller
 - Button: A button that sends a NoteOn event when pressed and a NoteOff event when released
 - Knob: A knob that sends a ControlChange event when turned
+
 The Note field is the note that is sent when the control is pressed. For knobs, this is the Controller number.
 
 Knobs have additional options:
