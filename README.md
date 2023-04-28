@@ -63,6 +63,12 @@ This will automatically start the program on startup and restart it if it crashe
 
 ### Windows
 
+**Prerequisites**
+
+This program requires the [LoopMidi](https://www.tobias-erichsen.de/software/loopmidi.html) driver to be installed. Please install it before running the program.
+
+This program required dotnet6 to be installed. If you have Windows 11, you already have it installed. If you have Windows 10, you can install it from [here](https://dotnet.microsoft.com/en-us/download/dotnet/6.0).
+
 1. Download the latest release from the [releases page](https://github.com/Longoon12000/PiMidiController/releases)
 2. Extract the PiControllerServer.exe to the directory of your choice (eg. `%LocalAppdata%\PiMidiController\`)
 3. Run the PiControllerServer.exe
@@ -84,12 +90,6 @@ This application is self-contained and does not require any configuration. Simpl
 Example: `dotnet PiControllerClient.dll 192.168.0.25 14817`
 
 ### Windows
-
-**Prerequisites**
-
-This program requires the [LoopMidi](https://www.tobias-erichsen.de/software/loopmidi.html) driver to be installed. Please install it before running the program.
-
-This program required dotnet6 to be installed. If you have Windows 11, you already have it installed. If you have Windows 10, you can install it from [here](https://dotnet.microsoft.com/en-us/download/dotnet/6.0).
 
 The default port is 14817. You can change it by supplying the port as a command line argument:
 
