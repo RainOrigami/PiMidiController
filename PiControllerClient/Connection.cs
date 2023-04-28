@@ -59,10 +59,9 @@ namespace PiControllerClient
                 await streamWriter.WriteLineAsync(raw);
                 await streamWriter.FlushAsync();
             }
-            catch
+            catch (Exception ex)
             {
-                await connect();
-                await Send(raw);
+                await Console.Out.WriteLineAsync(ex.ToString());
             }
         }
 
@@ -148,7 +147,7 @@ namespace PiControllerClient
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex);
-                    Thread.Sleep(100);
+                    await Task.Delay(100);
                 }
             }
         }
