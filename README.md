@@ -43,10 +43,10 @@ After=graphical.target
 [Service]
 User=your-username
 Group=your-usergroup
-Environment=DOTNET_ROOT=$HOME/.dotnet
-Environment=PATH=$PATH:$HOME/.dotnet
+Environment=DOTNET_ROOT=/path/to/your/dotnet
+Environment=PATH=$PATH:/path/to/your/dotnet
 Environment=DISPLAY=:0
-ExecStart=/home/your-username/.dotnet/dotnet /your/install/dir/PiControllerClient.dll hostiporname port
+ExecStart=/your/install/dir/PiControllerClient hostiporname port
 Restart=always
 
 [Install]
@@ -54,10 +54,11 @@ WantedBy=graphical.target
 ```
 3. Replace `your-username` with your username and `your-usergroup` with your usergroup
 4. Replace `/your/install/dir` with the directory you installed the program to
-5. Replace `hostiporname` with the ip or hostname of the server and `port` with the port of the server (your VoiceMeeter host device)
-6. Save the file with `Ctrl+X` and `Y`
-7. Enable the service with `sudo systemctl enable pimidi.service`
-8. Start the service with `sudo systemctl start pimidi.service`
+5. Replace `/path/to/your/dotnet` with the directory of your dotnet installation (eg. `/home/your-username/.dotnet`)
+6. Replace `hostiporname` with the ip or hostname of the server and `port` with the port of the server (your VoiceMeeter host device)
+7. Save the file with `Ctrl+X` and `Y`
+8. Enable the service with `sudo systemctl enable pimidi.service`
+9. Start the service with `sudo systemctl start pimidi.service`
 
 This will automatically start the program on startup and restart it if it crashes. Auto-login is recommended.
 
@@ -81,7 +82,19 @@ Please note that this program has to start before VoiceMeeter for VoiceMeeter to
 
 ### Raspberry Pi
 
-This application is self-contained and does not require any configuration. Simply run the program with the correct parameters and it will automatically connect to the server.
+You can change certain aspects of the client by modifying the `PiControllerClient.dll.config`:
+
+- AutoSoftStopEnabled (True/False, default True): Whether or not automatically added soft stops are enabled
+- AutoSoftStopPercentageRange (int 1-100, default 10): The steps (in percent) of the automatically added soft stops, eg. 10 means an auto soft stop at every 10%
+- PixelsPerValue (int 1-inf, default 2): The amount of pixels you have to drag for the value to change by 1
+- PixelsPerValueSoftStop (int 1-inf, default 50): The amount of pixels you have to drag for the value to change by 1 while being on a soft stop value
+- PixelPerValueAutoSoftStop (int 1-inf, default 15): The amount of pixels you have to drag for the value to change by 1 while being on an automatically added soft stop value
+- LineLength (int 1-inf, default 10): The length of the indicator lines on the border of the circle of knobs
+- LineThickness (int 1-inf, default 3): The thickness of the indicator lines on the border of the circle of knobs
+- ValueTextSize (int 1-inf, default 20): The text size of the value of knobs
+- AngleMin (int -360-+360, default -135): The angle where the minimum position of the knob is
+- AngleMax (int -360-+360, default 270): The angle where the maximum position of the knob is
+- AngleOverdrive (int -360-+360, default 90): The angle of the overdrive of the knob, relative to AngleMax
 
 `dotnet PiControllerClient.dll hostiporname port`
 - `hostiporname`: The ip or hostname of the server
@@ -90,6 +103,8 @@ This application is self-contained and does not require any configuration. Simpl
 Example: `dotnet PiControllerClient.dll 192.168.0.25 14817`
 
 ### Windows
+
+You can change the name of the virtual MIDI device created by this application by modifying the value for `MidiDeviceName` in the `PiControllerServer.dll.config`, for example if you are using this application in conjunction with VoxYou and find that VoxYou does not create a Forward MIDI device, because the name (`Pi Midi Controller VoxYou Forward`) is too long for MIDI device names.
 
 The default port is 14817. You can change it by supplying the port as a command line argument:
 
