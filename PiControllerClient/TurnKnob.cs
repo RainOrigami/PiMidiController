@@ -1,19 +1,21 @@
 ﻿using Gdk;
 using GLib;
 using Gtk;
+using System.Configuration;
 
 public class TurnKnob : Gtk.DrawingArea
 {
-    private const int LineLength = 10;
-    private const int LineThickness = 3;
-    private const int ValueTextSize = 20;
-    private const int AutoSoftStopPercentageRange = 10;
-    private const int pixelsPerValue = 2;
-    private const int pixelPerValueAutoSoft = 15;
-    private const int pixelsPerValueSoft = 50;
-    private const double angle_min = -135;
-    private const double angle_max = 270;
-    private const double angle_overdrive = 90;
+    private readonly int lineLength;
+    private readonly int lineThickness;
+    private readonly int valueTextSize;
+    private readonly int pixelsPerValue;
+    private readonly int pixelPerValueAutoSoft;
+    private readonly int pixelsPerValueSoft;
+    private readonly double angle_min;
+    private readonly double angle_max;
+    private readonly double angle_overdrive;
+    private readonly int autoSoftStopPercentageRange;
+    private readonly bool autoSoftStopEnabled;
 
     private int knobSize;
     private int knobCenterX;
@@ -40,6 +42,61 @@ public class TurnKnob : Gtk.DrawingArea
 
     public TurnKnob(string label, int minValue, int maxValue, int overdriveValue, int[] softStops, bool centered)
     {
+        if (!bool.TryParse(ConfigurationManager.AppSettings["AutoSoftStopEnabled"], out autoSoftStopEnabled))
+        {
+            autoSoftStopEnabled = false;
+        }
+
+        if (!int.TryParse(ConfigurationManager.AppSettings["AutoSoftStopPercentageRange"], out autoSoftStopPercentageRange))
+        {
+            autoSoftStopPercentageRange = 10;
+        }
+
+        if (!int.TryParse(ConfigurationManager.AppSettings["PixelsPerValue"], out pixelsPerValue))
+        {
+            pixelsPerValue = 2;
+        }
+
+        if (!int.TryParse(ConfigurationManager.AppSettings["PixelsPerValueSoftStop"], out pixelsPerValueSoft))
+        {
+            pixelsPerValueSoft = 50;
+        }
+
+        if (!int.TryParse(ConfigurationManager.AppSettings["PixelPerValueAutoSoftStop"], out pixelPerValueAutoSoft))
+        {
+            pixelPerValueAutoSoft = 15;
+        }
+
+        if (!int.TryParse(ConfigurationManager.AppSettings["LineLength"], out lineLength))
+        {
+            lineLength = 10;
+        }
+
+        if (!int.TryParse(ConfigurationManager.AppSettings["LineThickness"], out lineThickness))
+        {
+            lineThickness = 3;
+        }
+
+        if (!int.TryParse(ConfigurationManager.AppSettings["ValueTextSize"], out valueTextSize))
+        {
+            valueTextSize = 20;
+        }
+
+        if (!double.TryParse(ConfigurationManager.AppSettings["AngleMin"], out angle_min))
+        {
+            angle_min = -135;
+        }
+
+        if (!double.TryParse(ConfigurationManager.AppSettings["AngleMax"], out angle_max))
+        {
+            angle_max = 270;
+        }
+
+        if (!double.TryParse(ConfigurationManager.AppSettings["AngleOverdrive"], out angle_overdrive))
+        {
+            angle_overdrive = 90;
+        }
+
         this.StyleContext.AddClass("turn-knob");
         this.label = label;
         this.minValue = minValue;
@@ -90,7 +147,7 @@ public class TurnKnob : Gtk.DrawingArea
                 {
                     currentValuePixels = pixelsPerValueSoft;
                 }
-                else if (newValue % AutoSoftStopPercentageRange == 0)
+                else if (autoSoftStopEnabled && newValue % autoSoftStopPercentageRange == 0)
                 {
                     currentValuePixels = pixelPerValueAutoSoft;
                 }
@@ -156,14 +213,14 @@ public class TurnKnob : Gtk.DrawingArea
         RGBA foregroundColor = StyleContext.GetColor(StateFlags.Normal);
         cr.SetSourceRGB(foregroundColor.Red, foregroundColor.Green, foregroundColor.Blue);
 
-        cr.LineWidth = LineThickness;
+        cr.LineWidth = lineThickness;
         cr.Arc(knobCenterX, knobCenterY, knobSize / 2, 0, 2 * Math.PI);
         cr.Stroke();
 
         if (!this.centered)
         {
             cr.SetSourceRGB(1, 0, 0);
-            cr.LineWidth = LineThickness * 2;
+            cr.LineWidth = lineThickness * 2;
             cr.Arc(knobCenterX, knobCenterY, knobSize / 2, DegToRad(45), DegToRad(90));
             cr.Stroke();
         }
@@ -174,24 +231,24 @@ public class TurnKnob : Gtk.DrawingArea
         }
 
         // Draw value line
-        cr.LineWidth = LineThickness;
+        cr.LineWidth = lineThickness;
 
         cr.MoveTo(knobCenterX, knobCenterY);
-        cr.LineTo(knobCenterX + (knobSize / 2 - LineLength) * Math.Cos(angle),
-                  knobCenterY + (knobSize / 2 - LineLength) * Math.Sin(angle));
+        cr.LineTo(knobCenterX + (knobSize / 2 - lineLength) * Math.Cos(angle),
+                  knobCenterY + (knobSize / 2 - lineLength) * Math.Sin(angle));
         cr.Stroke();
 
         cr.SetSourceRGB(foregroundColor.Red, foregroundColor.Green, foregroundColor.Blue);
 
         // Draw name text
-        cr.SetFontSize(ValueTextSize * 1.35);
+        cr.SetFontSize(valueTextSize * 1.35);
         var extends = cr.TextExtents(this.label);
         cr.MoveTo(knobCenterX - extends.Width / 2, knobSize / 4 * 2);
         cr.ShowText(this.label);
 
         // Draw value text
         string text = Math.Floor((((double)value / maxValue * 100.0) - (this.centered ? 50 : 0)) * (this.centered ? 2 : 1)).ToString() + "%";
-        cr.SetFontSize(ValueTextSize);
+        cr.SetFontSize(valueTextSize);
         var extents = cr.TextExtents(text);
         cr.MoveTo(knobCenterX - extents.Width / 2, knobSize / 4 * 3);
         cr.ShowText(text);
@@ -204,8 +261,8 @@ public class TurnKnob : Gtk.DrawingArea
         for (int i = 0; i <= 10; i++)
         {
             double angle = i * angleStep + Math.PI * 0.75;
-            double x1 = knobCenterX + (knobSize / 2 - LineLength) * Math.Cos(angle);
-            double y1 = knobCenterY + (knobSize / 2 - LineLength) * Math.Sin(angle);
+            double x1 = knobCenterX + (knobSize / 2 - lineLength) * Math.Cos(angle);
+            double y1 = knobCenterY + (knobSize / 2 - lineLength) * Math.Sin(angle);
             double x2 = knobCenterX + knobSize / 2 * Math.Cos(angle);
             double y2 = knobCenterY + knobSize / 2 * Math.Sin(angle);
             cr.MoveTo(x1, y1);
@@ -216,7 +273,7 @@ public class TurnKnob : Gtk.DrawingArea
         if (overdriveValue > 0)
         {
             cr.SetSourceRGB(1, 0, 0);
-            cr.MoveTo(knobCenterX + (knobSize / 2 - LineLength) * Math.Cos(DegToRad(angle_overdrive)), knobCenterY + (knobSize / 2 - LineLength) * Math.Sin(DegToRad(angle_overdrive)));
+            cr.MoveTo(knobCenterX + (knobSize / 2 - lineLength) * Math.Cos(DegToRad(angle_overdrive)), knobCenterY + (knobSize / 2 - lineLength) * Math.Sin(DegToRad(angle_overdrive)));
             cr.LineTo(knobCenterX + knobSize / 2 * Math.Cos(DegToRad(angle_overdrive)), knobCenterY + knobSize / 2 * Math.Sin(DegToRad(angle_overdrive)));
             cr.Stroke();
         }

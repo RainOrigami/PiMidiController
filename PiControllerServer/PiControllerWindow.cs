@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using PiControllerShared;
 using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.Configuration;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -35,7 +36,7 @@ namespace PiControllerServer
             this.fillTabDefinersFromDefinitions(this.definitions.ToArray());
 
             // Midi
-            this.midi = new Midi("Pi Midi Controller");
+            this.midi = new Midi(ConfigurationManager.AppSettings["MidiDeviceName"] ?? "Pi Midi Controller");
             this.midi.MidiEventReceived += this.Midi_MidiEventReceived;
             this.midi.ColorEventReceived += this.Midi_ColorEventReceived;
 
