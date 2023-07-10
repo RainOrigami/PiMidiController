@@ -169,4 +169,4 @@ To set the color of a button from MacroButtons, you can use the following comman
 This will send a SysEx event to OUT1 with the button number BB color values RR, GG and BB. The controller number is the same as the note number of the button.  
 **Important**: The values for CC, RR, GG and BB are hexadecimal and have a maximum value of 7F (127). Colors are sent as RGB values that range from 0 to 127 where 127 is maximum brightness. To convert a normal RGB value to the value used by the controller, divide the RGB (0-255) value by 2.  
 For example to set the color of button with note 4 to red (RGB 255, 0, 0), you can use the following command:  
-`System.SendMidi("out1", "data", F0, 0, 4, 7F, 0, 0, F7);`
+`System.SendMidi("out1", "data", F0, 4, 7F, 0, 0, F7);`
