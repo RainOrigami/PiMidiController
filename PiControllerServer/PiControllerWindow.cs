@@ -1,3 +1,4 @@
+using Hardware.Info;
 using NAudio.Midi;
 using Newtonsoft.Json;
 using PiControllerShared;
@@ -25,9 +26,24 @@ namespace PiControllerServer
         private Midi midi;
         private Server server;
 
+        private IHardwareInfo hardwareInfo = new HardwareInfo();
+
         public PiControllerWindow()
         {
             InitializeComponent();
+
+            this.hardwareInfo.RefreshAll();
+
+            new System.Windows.Forms.Timer()
+            {
+                Interval = 1000,
+                Enabled = true
+            }.Tick += async (s, e) =>
+            {
+                this.hardwareInfo.RefreshAll();
+
+                await (this.server?.SendRaw(new SysInfoMessageData(this.hardwareInfo)) ?? Task.CompletedTask);
+            };
 
             lbTabs.DataSource = tabs;
             lbTabs.DisplayMember = "TabName";
@@ -168,6 +184,7 @@ namespace PiControllerServer
 
         private async void Server_ClientConnected(object? sender, Guid e)
         {
+            await this.server.SendRaw(e, new SysInfoMessageData(this.hardwareInfo));
             await this.server.SendRaw(e, new PageDefinitionsMessageData(this.definitions.ToArray()));
             foreach (MidiEvent lastEvent in this.lastEvents.Values)
             {
@@ -232,6 +249,11 @@ namespace PiControllerServer
         {
             if (e is ControlChangeEvent controlChange)
             {
+                if (controlChange.Controller is MidiController.AllNotesOff or MidiController.ResetAllControllers)
+                {
+                    return;
+                }
+
                 ControlDefinition? control = this.definitions.SelectMany(d => d.Controls).FirstOrDefault(c => c.Note == (int)controlChange.Controller);
                 if (control is null)
                 {

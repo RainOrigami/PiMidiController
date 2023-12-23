@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Hardware.Info" Version="100.0.1" />
+  </ItemGroup>
+
 </Project>

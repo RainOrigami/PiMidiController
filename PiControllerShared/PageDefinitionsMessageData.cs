@@ -4,15 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PiControllerShared
-{
-    public class PageDefinitionsMessageData : MessageData
-    {
-        public PageDefinitionsMessageData(PageDefinition[] definitions)
-        {
-            this.Definitions = definitions;
-        }
+namespace PiControllerShared;
 
-        public PageDefinition[] Definitions { get; }
+public class PageDefinitionsMessageData : MessageData
+{
+    public PageDefinitionsMessageData(PageDefinition[] definitions)
+    {
+        this.Definitions = definitions;
     }
+
+    public PageDefinition[] Definitions { get; }
 }

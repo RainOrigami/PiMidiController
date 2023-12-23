@@ -1,4 +1,5 @@
 ﻿using Gtk;
+using Hardware.Info;
 using Newtonsoft.Json;
 using PiControllerShared;
 using System;
@@ -16,6 +17,7 @@ namespace PiControllerClient
         private readonly int port;
         private TcpClient? client;
 
+        public event EventHandler<IHardwareInfo>? HardwareInfoReceived;
         public event EventHandler<PageDefinition[]>? PageDefinitionsReceived;
         public event EventHandler<(Guid controlId, int value)>? ValueReceived;
         public event EventHandler<(Guid controlId, int red, int green, int blue)>? ColorReceived;
@@ -98,6 +100,9 @@ namespace PiControllerClient
 
                     switch (messageData)
                     {
+                        case SysInfoMessageData sysInfoMessageData:
+                            this.HardwareInfoReceived?.Invoke(this, sysInfoMessageData.HardwareInfo);
+                            continue;
                         case PageDefinitionsMessageData pageDefinitionsMessageData:
                             this.PageDefinitionsReceived?.Invoke(this, pageDefinitionsMessageData.Definitions);
                             continue;

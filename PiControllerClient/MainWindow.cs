@@ -1,5 +1,6 @@
 ﻿
 using Gtk;
+using Hardware.Info;
 using Newtonsoft.Json;
 using PiControllerShared;
 using System;
@@ -69,9 +70,20 @@ namespace PiControllerClient
 
             Console.WriteLine("Ready and connecting");
             this.connection = new Connection(host, port);
+            this.connection.HardwareInfoReceived += this.Connection_HardwareInfoReceived;
             this.connection.PageDefinitionsReceived += this.Connection_PageDefinitionsReceived;
             this.connection.ValueReceived += this.Connection_ValueReceived;
             this.connection.ColorReceived += this.Connection_ColorReceived;
+        }
+
+        private void Connection_HardwareInfoReceived(object? sender, IHardwareInfo e)
+        {
+            if (notebook.NPages == 0)
+            {
+                createSysInfoPage(e);
+            }
+
+            updateSysInfoPage(e);
         }
 
         private void Connection_ColorReceived(object? sender, (Guid controlId, int red, int green, int blue) e)
@@ -135,6 +147,77 @@ namespace PiControllerClient
             Gtk.Application.Invoke(delegate { updatePages(definitions); });
         }
 
+        private void createSysInfoPage(IHardwareInfo hardwareInfo)
+        {
+            var page = new Grid()
+            {
+                Hexpand = true,
+                Vexpand = true,
+                Halign = Align.Fill,
+                Valign = Align.Fill,
+                ColumnHomogeneous = true,
+                RowHomogeneous = true,
+                ColumnSpacing = 12,
+                RowSpacing = 12
+            };
+
+            notebook.AppendPage(page, new Label("Sys"));
+            page.Show();
+
+            // CPU is an nxn grid based on the number of cores
+            int gridSize = (int)Math.Ceiling(Math.Sqrt(hardwareInfo.CpuList.First().CpuCoreList.Count));
+            int currentGridCell = 0;
+
+            foreach (CpuCore cpuCore in hardwareInfo.CpuList.First().CpuCoreList)
+            {
+                page.Attach(new LoadIndicator(cpuCore.Name, 0, 100, "%"), currentGridCell % gridSize, currentGridCell / gridSize, 1, 1);
+                currentGridCell++;
+            }
+
+            //// CPU temperature is an nxn grid based on the number of cores
+            //int yOffset = gridSize;
+            //gridSize = (int)Math.Ceiling(Math.Sqrt(hardwareInfo.CpuList.First().CpuCoreList.Count));
+            //currentGridCell = 0;
+
+            //foreach (CpuCore cpuCore in hardwareInfo.CpuList.First().CpuCoreList)
+            //{
+            //    page.Attach(new LoadIndicator(cpuCore.Name, 0, 100, "°C"), yOffset + currentGridCell % gridSize, currentGridCell / gridSize, 1, 1);
+            //    currentGridCell++;
+            //}
+
+            // RAM is a single grid cell
+            page.Attach(new LoadIndicator("RAM", 0, (int)Math.Ceiling(hardwareInfo.MemoryStatus.TotalPhysical / 1024.0 / 1024.0 / 1024.0), "GB"), gridSize, 0, gridSize, 1);
+
+            //// Storage is an nxn grid based on the number of drives
+            //yOffset += gridSize;
+            //gridSize = (int)Math.Ceiling(Math.Sqrt(hardwareInfo.DriveList.Count));
+            //currentGridCell = 0;
+
+            //foreach (Drive drive in hardwareInfo.DriveList)
+            //{
+            //    page.Attach(new LoadIndicator(drive.Name, 0, (int)Math.Ceiling(drive.Size / 1024.0 / 1024.0 / 1024.0), "GB"), yOffset + currentGridCell % gridSize, 1 + currentGridCell / gridSize, 1, 1);
+            //    currentGridCell++;
+            //}
+
+            foreach (Widget widget in page.Children)
+            {
+                widget.Show();
+            }
+        }
+
+        private void updateSysInfoPage(IHardwareInfo hardwareInfo)
+        {
+            Widget[] pageWidgets = ((Grid)notebook.GetNthPage(0)).Children;
+
+            foreach (CpuCore cpuCore in hardwareInfo.CpuList.First().CpuCoreList)
+            {
+                (pageWidgets.FirstOrDefault(w => w is LoadIndicator loadIndicator && loadIndicator.Label == cpuCore.Name && loadIndicator.Unit == "%") as LoadIndicator)?.SetValue(cpuCore.PercentProcessorTime);
+            }
+
+            // RAM is a single grid cell
+            (pageWidgets.FirstOrDefault(w => w is LoadIndicator loadIndicator && loadIndicator.Label == "RAM" && loadIndicator.Unit == "GB") as LoadIndicator)?.SetValue((float)(hardwareInfo.MemoryStatus.TotalPhysical - hardwareInfo.MemoryStatus.AvailablePhysical) / 1024.0f / 1024.0f / 1024.0f);
+        }
+
         private void updatePages(PageDefinition[] definitions)
         {
             Console.WriteLine($"Window size is {AllocatedWidth}x{AllocatedHeight}");
@@ -143,9 +226,9 @@ namespace PiControllerClient
             int cols = 5;
 
             Console.WriteLine($"Removing {notebook.NPages} notebook pages...");
-            while (notebook.NPages > 0)
+            while (notebook.NPages > 1)
             {
-                notebook.RemovePage(0);
+                notebook.RemovePage(1);
             }
 
             Grid[] panels = new Grid[definitions.Length];
@@ -191,7 +274,7 @@ namespace PiControllerClient
                             {
                                 Vexpand = true,
                                 Hexpand = true,
-                                Value = (knobControlDefinition.Centered ? (knobControlDefinition.Max - knobControlDefinition.Min) / 2 + 1: knobControlDefinition.Max)
+                                Value = (knobControlDefinition.Centered ? (knobControlDefinition.Max - knobControlDefinition.Min) / 2 + 1 : knobControlDefinition.Max)
                             };
 
                             turnKnob.ValueChanged += (sender, args) => OnKnobTurned(sender, args, controlDefinition.Id);
