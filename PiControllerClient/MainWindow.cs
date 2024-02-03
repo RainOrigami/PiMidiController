@@ -1,6 +1,5 @@
 ﻿
 using Gtk;
-using Hardware.Info;
 using Newtonsoft.Json;
 using PiControllerShared;
 using System;
@@ -76,14 +75,14 @@ namespace PiControllerClient
             this.connection.ColorReceived += this.Connection_ColorReceived;
         }
 
-        private void Connection_HardwareInfoReceived(object? sender, IHardwareInfo e)
+        private void Connection_HardwareInfoReceived(object? sender, (CPUCore[] cpus, MemoryStatus memoryStatus) e)
         {
             if (notebook.NPages == 0)
             {
-                createSysInfoPage(e);
+                Gtk.Application.Invoke(delegate { createSysInfoPage(e.cpus, e.memoryStatus); });
             }
 
-            updateSysInfoPage(e);
+            Gtk.Application.Invoke(delegate { updateSysInfoPage(e.cpus, e.memoryStatus); });
         }
 
         private void Connection_ColorReceived(object? sender, (Guid controlId, int red, int green, int blue) e)
@@ -147,7 +146,7 @@ namespace PiControllerClient
             Gtk.Application.Invoke(delegate { updatePages(definitions); });
         }
 
-        private void createSysInfoPage(IHardwareInfo hardwareInfo)
+        private void createSysInfoPage(CPUCore[] cpus, MemoryStatus memoryStatus)
         {
             var page = new Grid()
             {
@@ -165,12 +164,12 @@ namespace PiControllerClient
             page.Show();
 
             // CPU is an nxn grid based on the number of cores
-            int gridSize = (int)Math.Ceiling(Math.Sqrt(hardwareInfo.CpuList.First().CpuCoreList.Count));
+            int gridSize = (int)Math.Ceiling(Math.Sqrt(cpus.Length));
             int currentGridCell = 0;
 
-            foreach (CpuCore cpuCore in hardwareInfo.CpuList.First().CpuCoreList)
+            foreach (CPUCore cpuCore in cpus)
             {
-                page.Attach(new LoadIndicator(cpuCore.Name, 0, 100, "%"), currentGridCell % gridSize, currentGridCell / gridSize, 1, 1);
+                page.Attach(new LoadIndicator($"CPU Core {cpuCore.Name}", 0, 100, "%"), currentGridCell % gridSize, currentGridCell / gridSize, 1, 1);
                 currentGridCell++;
             }
 
@@ -186,7 +185,7 @@ namespace PiControllerClient
             //}
 
             // RAM is a single grid cell
-            page.Attach(new LoadIndicator("RAM", 0, (int)Math.Ceiling(hardwareInfo.MemoryStatus.TotalPhysical / 1024.0 / 1024.0 / 1024.0), "GB"), gridSize, 0, gridSize, 1);
+            page.Attach(new LoadIndicator("RAM", 0, (int)Math.Ceiling(memoryStatus.TotalPhysicalMemory / 1024.0 / 1024.0 / 1024.0), "GB"), gridSize, 0, gridSize, 1);
 
             //// Storage is an nxn grid based on the number of drives
             //yOffset += gridSize;
@@ -205,17 +204,17 @@ namespace PiControllerClient
             }
         }
 
-        private void updateSysInfoPage(IHardwareInfo hardwareInfo)
+        private void updateSysInfoPage(CPUCore[] cpus, MemoryStatus memoryStatus)
         {
             Widget[] pageWidgets = ((Grid)notebook.GetNthPage(0)).Children;
 
-            foreach (CpuCore cpuCore in hardwareInfo.CpuList.First().CpuCoreList)
+            foreach (CPUCore cpuCore in cpus)
             {
-                (pageWidgets.FirstOrDefault(w => w is LoadIndicator loadIndicator && loadIndicator.Label == cpuCore.Name && loadIndicator.Unit == "%") as LoadIndicator)?.SetValue(cpuCore.PercentProcessorTime);
+                (pageWidgets.FirstOrDefault(w => w is LoadIndicator loadIndicator && loadIndicator.Label == $"CPU Core {cpuCore.Name}" && loadIndicator.Unit == "%") as LoadIndicator)?.SetValue(Math.Ceiling(cpuCore.UsagePercentage));
             }
 
             // RAM is a single grid cell
-            (pageWidgets.FirstOrDefault(w => w is LoadIndicator loadIndicator && loadIndicator.Label == "RAM" && loadIndicator.Unit == "GB") as LoadIndicator)?.SetValue((float)(hardwareInfo.MemoryStatus.TotalPhysical - hardwareInfo.MemoryStatus.AvailablePhysical) / 1024.0f / 1024.0f / 1024.0f);
+            (pageWidgets.FirstOrDefault(w => w is LoadIndicator loadIndicator && loadIndicator.Label == "RAM" && loadIndicator.Unit == "GB") as LoadIndicator)?.SetValue(Math.Round((memoryStatus.TotalPhysicalMemory - memoryStatus.AvailablePhysicalMemory) / 1024.0f / 1024.0f / 1024.0f, 2));
         }
 
         private void updatePages(PageDefinition[] definitions)

@@ -1,5 +1,4 @@
 ﻿using Gtk;
-using Hardware.Info;
 using Newtonsoft.Json;
 using PiControllerShared;
 using System;
@@ -17,7 +16,7 @@ namespace PiControllerClient
         private readonly int port;
         private TcpClient? client;
 
-        public event EventHandler<IHardwareInfo>? HardwareInfoReceived;
+        public event EventHandler<(CPUCore[] cpus, MemoryStatus memoryStatus)>? HardwareInfoReceived;
         public event EventHandler<PageDefinition[]>? PageDefinitionsReceived;
         public event EventHandler<(Guid controlId, int value)>? ValueReceived;
         public event EventHandler<(Guid controlId, int red, int green, int blue)>? ColorReceived;
@@ -54,9 +53,12 @@ namespace PiControllerClient
 
             try
             {
-                StreamWriter streamWriter = new(this.client.GetStream());
-                await streamWriter.WriteLineAsync(raw);
-                await streamWriter.FlushAsync();
+                NetworkStream stream = this.client.GetStream();
+                byte[] buffer = Encoding.UTF8.GetBytes(raw);
+                byte[] frameSize = BitConverter.GetBytes(buffer.Length);
+                await stream.WriteAsync(frameSize, 0, frameSize.Length);
+                await stream.WriteAsync(buffer, 0, buffer.Length);
+                await stream.FlushAsync();
             }
             catch (Exception ex)
             {
@@ -72,20 +74,52 @@ namespace PiControllerClient
                 await connect();
             }
 
-            StreamReader streamReader = new(this.client.GetStream());
-
             while (true)
             {
                 try
                 {
-                    string? receivedData = null;
-                    receivedData = await streamReader.ReadLineAsync();
+                    NetworkStream stream = this.client.GetStream();
 
-                    if (receivedData == null)
+                    byte[] buffer = new byte[1024 * 1024 * 52];
+                    await stream.ReadAsync(buffer, 0, 4);
+                    int frameSize = BitConverter.ToInt32(buffer, 0);
+                    //await Console.Out.WriteLineAsync($"Received frame size: {frameSize}");
+
+                    //if (frameSize == 0)
+                    //{
+                    //    await Console.Out.WriteLineAsync("Lost connection to client");
+                    //    throw new Exception("Lost connection to client");
+                    //}
+
+                    int readSize = 0;
+
+                    while (readSize < frameSize)
                     {
-                        await Task.Delay(1);
-                        continue;
+                        while (!stream.DataAvailable)
+                        {
+                            await Task.Delay(100);
+                        }
+                        //await Console.Out.WriteLineAsync($"Trying to read {frameSize - readSize} bytes into offset {readSize} for buffer size {buffer.Length} with data available: {stream.DataAvailable}");
+                        readSize += await stream.ReadAsync(buffer, readSize, frameSize - readSize);
                     }
+
+                    //if (readSize == 0)
+                    //{
+                    //    await Console.Out.WriteLineAsync("Lost connection to client");
+                    //    throw new Exception("Lost connection to client");
+                    //}
+
+                    //if (readSize < frameSize)
+                    //{
+                    //    await Console.Out.WriteLineAsync($"Invalid data received, expected {frameSize} bytes, got {readSize} bytes");
+                    //    continue;
+                    //}
+
+                    //await Console.Out.WriteLineAsync($"Received {readSize} bytes");
+
+                    string receivedData = Encoding.UTF8.GetString(buffer, 0, readSize);
+
+                    //await Console.Out.WriteLineAsync($"Received data: {receivedData}");
 
                     MessageData? messageData = JsonConvert.DeserializeObject<MessageData>(receivedData, new JsonSerializerSettings()
                     {
@@ -101,7 +135,7 @@ namespace PiControllerClient
                     switch (messageData)
                     {
                         case SysInfoMessageData sysInfoMessageData:
-                            this.HardwareInfoReceived?.Invoke(this, sysInfoMessageData.HardwareInfo);
+                            this.HardwareInfoReceived?.Invoke(this, (sysInfoMessageData.Cpus, sysInfoMessageData.MemoryStatus));
                             continue;
                         case PageDefinitionsMessageData pageDefinitionsMessageData:
                             this.PageDefinitionsReceived?.Invoke(this, pageDefinitionsMessageData.Definitions);
@@ -121,8 +155,12 @@ namespace PiControllerClient
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex);
+                    try
+                    {
+                        this.client.Close();
+                    }
+                    catch { }
                     await connect();
-                    streamReader = new(this.client.GetStream());
                 }
             }
         }
@@ -138,9 +176,13 @@ namespace PiControllerClient
                     {
                         SendTimeout = 100
                     };
-                    await this.client.ConnectAsync(this.host, this.port, new CancellationTokenSource(100).Token);
+                    await this.client.ConnectAsync(this.host, this.port, new CancellationTokenSource(500).Token);
                     Console.WriteLine("Success.");
                     break;
+                }
+                catch (OperationCanceledException)
+                {
+                    await Task.Delay(500);
                 }
                 catch (Exception ex)
                 {

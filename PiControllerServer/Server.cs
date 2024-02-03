@@ -2,6 +2,7 @@
 using PiControllerShared;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -13,10 +14,12 @@ namespace PiControllerServer
 {
     internal class Server
     {
-        private Dictionary<Guid, TcpClient> connections = new();
+        private TcpClient connection = new();
 
-        public event EventHandler<Guid>? ClientConnected;
+        public event EventHandler? ClientConnected;
         public event EventHandler<(Guid, int)>? NoteReceived;
+
+        private Queue<MessageData> messages = new();
 
         public Server(int port)
         {
@@ -31,94 +34,119 @@ namespace PiControllerServer
             while (true)
             {
                 TcpClient client = await listener.AcceptTcpClientAsync();
-                Task.Run(() => handleClient(client));
+                _ = Task.Run(() => handleClient(client));
             }
         }
 
+        NetworkStream? stream = null;
 
         private async Task handleClient(TcpClient client)
         {
-            Guid clientGuid = Guid.NewGuid();
-            this.connections.Add(clientGuid, client);
+            this.connection = client;
 
-            this.ClientConnected?.Invoke(this, clientGuid);
+            this.ClientConnected?.Invoke(this, new EventArgs());
+            this.stream = client.GetStream();
 
-            using (StreamReader stream = new StreamReader(client.GetStream()))
+            try
             {
+                byte[] buffer = new byte[1024 * 1024 * 52];
+                while (true)
+                {
+                    while (this.messages.Count > 0)
+                    {
+                        MessageData dataOut = this.messages.Dequeue();
+                        await this.sendRaw(dataOut);
+                    }
+
+                    if (stream.DataAvailable == false)
+                    {
+                        await Task.Delay(10);
+                        continue;
+                    }
+
+                    stream.Read(buffer, 0, 4);
+                    int frameSize = BitConverter.ToInt32(buffer, 0);
+
+                    int readSize = 0;
+                    while (readSize < frameSize)
+                    {
+                        while (!stream.DataAvailable)
+                        {
+                            await Task.Delay(10);
+                        }
+                        readSize += await stream.ReadAsync(buffer, readSize, frameSize - readSize);
+                    }
+
+                    string data = Encoding.UTF8.GetString(buffer, 0, readSize);
+
+                    if (data.Length < 38)
+                    {
+                        Debug.WriteLine($"Invalid data received: {data}");
+                        continue;
+                    }
+
+                    if (!Guid.TryParse(data[0..36], out Guid guid))
+                    {
+                        Debug.WriteLine($"Invalid data received: {data}");
+                        continue;
+                    }
+
+                    if (!int.TryParse(data[37..].Trim(), out int value))
+                    {
+                        Debug.WriteLine($"Invalid data received: {data}");
+                        continue;
+                    }
+
+                    this.NoteReceived?.Invoke(this, (guid, value));
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
                 try
                 {
-                    byte[] buffer = new byte[1024];
-                    while (true)
-                    {
-                        string? data = await stream.ReadLineAsync();
-
-                        if (data == null)
-                        {
-                            throw new Exception("Lost connection to client");
-                        }
-
-                        if (data.Length < 38)
-                        {
-                            await Console.Out.WriteLineAsync($"Invalid data received: {data}");
-                            continue;
-                        }
-
-                        if (!Guid.TryParse(data[0..36], out Guid guid))
-                        {
-                            await Console.Out.WriteLineAsync($"Invalid data received: {data}");
-                            continue;
-                        }
-
-                        if (!int.TryParse(data[37..].Trim(), out int value))
-                        {
-                            await Console.Out.WriteLineAsync($"Invalid data received: {data}");
-                            continue;
-                        }
-
-                        this.NoteReceived?.Invoke(this, (guid, value));
-                    }
+                    this.connection.Close();
                 }
-                catch (Exception ex)
+                catch { }
+                try
                 {
-                    Console.WriteLine(ex.ToString());
-                    this.connections.Remove(clientGuid);
+                    this.connection.Dispose();
                 }
+                catch { }
             }
         }
 
-        public async Task SendNote(Guid controlId, int value)
+        public void SendNote(Guid controlId, int value)
         {
-            await SendRaw(new ValueMessageData(controlId, value));
+            this.messages.Enqueue(new ValueMessageData(controlId, value));
         }
 
-        public async Task SendColor(Guid controlId, int red, int green, int blue)
+        public void SendColor(Guid controlId, int red, int green, int blue)
         {
-            await SendRaw(new ColorMessageData(controlId, red, green, blue));
+            this.messages.Enqueue(new ColorMessageData(controlId, red, green, blue));
         }
 
-        public async Task SendRaw(MessageData data)
+        public void SendRaw(MessageData data)
         {
-            List<Task> sendingTasks = new List<Task>();
-            foreach (KeyValuePair<Guid, TcpClient> connection in this.connections)
+            this.messages.Enqueue(data);
+        }
+
+        private async Task sendRaw(MessageData data)
+        {
+            if (this.stream is null)
             {
-                sendingTasks.Add(SendRaw(connection.Key, data));
-            }
-            await Task.WhenAll(sendingTasks);
-        }
-
-        public async Task SendRaw(Guid clientGuid, MessageData data)
-        {
-            if (this.connections.TryGetValue(clientGuid, out TcpClient? client) == false)
-            {
+                Console.WriteLine("Stream is null");
                 return;
             }
 
             byte[] buffer = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(data, new JsonSerializerSettings()
             {
                 TypeNameHandling = TypeNameHandling.All
-            }) + '\n');
-            await client.GetStream().WriteAsync(buffer, 0, buffer.Length, new CancellationTokenSource(100).Token);
-            await client.GetStream().FlushAsync();
+            }));
+
+            await this.stream.WriteAsync(BitConverter.GetBytes(buffer.Length).AsMemory(0, 4), new CancellationTokenSource(100).Token);
+            await this.stream.WriteAsync(buffer, new CancellationTokenSource(100).Token);
+            await this.stream.FlushAsync();
         }
     }
 }

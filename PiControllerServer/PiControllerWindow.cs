@@ -1,10 +1,11 @@
-using Hardware.Info;
 using NAudio.Midi;
 using Newtonsoft.Json;
 using PiControllerShared;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Configuration;
+using System.Diagnostics;
+using System.Management;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -26,24 +27,27 @@ namespace PiControllerServer
         private Midi midi;
         private Server server;
 
-        private IHardwareInfo hardwareInfo = new HardwareInfo();
-
         public PiControllerWindow()
         {
             InitializeComponent();
 
-            this.hardwareInfo.RefreshAll();
-
-            new System.Windows.Forms.Timer()
+            Task.Run(async () =>
             {
-                Interval = 1000,
-                Enabled = true
-            }.Tick += async (s, e) =>
-            {
-                this.hardwareInfo.RefreshAll();
+                while (true)
+                {
+                    Stopwatch stopwatch = Stopwatch.StartNew();
+                    CPUCore[] cpuCores = this.getCPUUsage();
+                    Debug.WriteLine($"Refreshed cpu list in {stopwatch.ElapsedMilliseconds}ms");
+                    stopwatch.Restart();
+                    MemoryStatus memoryStatus = this.getMemoryStatus();
+                    Debug.WriteLine($"Refreshed mem status in {stopwatch.ElapsedMilliseconds}ms");
+                    stopwatch.Restart();
+                    this.server?.SendRaw(new SysInfoMessageData(cpuCores, memoryStatus));
+                    Debug.WriteLine($"Sent hardware info in {stopwatch.ElapsedMilliseconds}ms");
 
-                await (this.server?.SendRaw(new SysInfoMessageData(this.hardwareInfo)) ?? Task.CompletedTask);
-            };
+                    await Task.Delay(500);
+                }
+            });
 
             lbTabs.DataSource = tabs;
             lbTabs.DisplayMember = "TabName";
@@ -175,17 +179,17 @@ namespace PiControllerServer
             }
 
             this.saveDefinitionsToFile(definitionsFileName, this.definitions.ToArray());
-            await this.server.SendRaw(new PageDefinitionsMessageData(this.definitions.ToArray()));
+            this.server.SendRaw(new PageDefinitionsMessageData(this.definitions.ToArray()));
             foreach (MidiEvent lastEvent in this.lastEvents.Values.ToArray())
             {
                 await relayEvent(lastEvent);
             }
         }
 
-        private async void Server_ClientConnected(object? sender, Guid e)
+        private async void Server_ClientConnected(object? sender, EventArgs e)
         {
-            await this.server.SendRaw(e, new SysInfoMessageData(this.hardwareInfo));
-            await this.server.SendRaw(e, new PageDefinitionsMessageData(this.definitions.ToArray()));
+            this.server.SendRaw(new SysInfoMessageData(this.getCPUUsage(), this.getMemoryStatus()));
+            this.server.SendRaw(new PageDefinitionsMessageData(this.definitions.ToArray()));
             foreach (MidiEvent lastEvent in this.lastEvents.Values)
             {
                 await relayEvent(lastEvent);
@@ -236,7 +240,7 @@ namespace PiControllerServer
                 return;
             }
 
-            await this.server.SendColor(control.Id, e.red, e.green, e.blue);
+            this.server.SendColor(control.Id, e.red, e.green, e.blue);
 
             if (lastColors.ContainsKey(e.note))
             {
@@ -261,7 +265,7 @@ namespace PiControllerServer
                     return;
                 }
 
-                await this.server.SendNote(control.Id, controlChange.ControllerValue);
+                this.server.SendNote(control.Id, controlChange.ControllerValue);
 
                 if (lastEvents.ContainsKey((int)controlChange.Controller))
                 {
@@ -280,11 +284,11 @@ namespace PiControllerServer
 
                 if (noteEvent.CommandCode == MidiCommandCode.NoteOn)
                 {
-                    await this.server.SendNote(control.Id, noteEvent.Velocity);
+                    this.server.SendNote(control.Id, noteEvent.Velocity);
                 }
                 else if (noteEvent.CommandCode == MidiCommandCode.NoteOff)
                 {
-                    await this.server.SendNote(control.Id, 0);
+                    this.server.SendNote(control.Id, 0);
                 }
 
                 if (lastEvents.ContainsKey(noteEvent.NoteNumber))
@@ -309,5 +313,53 @@ namespace PiControllerServer
             this.tabs.Remove((TabDefiner)this.lbTabs.SelectedItem);
             scDefiners.Panel2.Controls.Clear();
         }
+
+        PerformanceCounter totalCpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+        PerformanceCounter[] cpuCounters = new PerformanceCounter[Environment.ProcessorCount];
+
+        private CPUCore[] getCPUUsage()
+        {
+            List<CPUCore> cpuCores = new List<CPUCore>();
+
+            int coreCount = Environment.ProcessorCount;
+            for (int coreIndex = 0; coreIndex < coreCount; coreIndex++)
+            {
+                if (cpuCounters[coreIndex] == null)
+                {
+                    cpuCounters[coreIndex] = new PerformanceCounter("Processor", "% Processor Time", coreIndex.ToString());
+                }
+
+                CPUCore core = new CPUCore($"{coreIndex}", cpuCounters[coreIndex].NextValue());
+
+                cpuCores.Add(core);
+            }
+
+            return cpuCores.ToArray();
+        }
+
+        ManagementObjectSearcher searcher = new ManagementObjectSearcher(new ObjectQuery("SELECT * FROM Win32_OperatingSystem"));
+        private MemoryStatus getMemoryStatus()
+        {
+            long totalPhysicalMemory = 0;
+            long availablePhysicalMemory = 0;
+
+            try
+            {
+                ManagementObjectCollection results = searcher.Get();
+
+                foreach (ManagementObject result in results)
+                {
+                    totalPhysicalMemory += Convert.ToInt64(result["TotalVisibleMemorySize"]) * 1024; // Convert from kilobytes to bytes
+                    availablePhysicalMemory += Convert.ToInt64(result["FreePhysicalMemory"]) * 1024; // Convert from kilobytes to bytes
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error retrieving memory information: {ex.Message}");
+            }
+
+            return new(totalPhysicalMemory, availablePhysicalMemory);
+        }
+
     }
 }

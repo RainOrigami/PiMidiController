@@ -22,15 +22,15 @@ public class LoadIndicator : Gtk.DrawingArea
         this.Unit = unit;
     }
 
-    private float value;
+    private double value;
 
-    public float Value
+    public double Value
     {
         get { return value; }
         set { this.SetValue(value); }
     }
 
-    public void SetValue(float value)
+    public void SetValue(double value)
     {
         if (value < minValue)
         {
@@ -65,8 +65,9 @@ public class LoadIndicator : Gtk.DrawingArea
         cr.MoveTo(5, 15);
         cr.ShowText(Label);
 
-        cr.SetSourceRGB(1.0, 1.0, 1.0);
-        cr.MoveTo(5, 30);
+        // center text
+        var extends = cr.TextExtents($"{value} {Unit}");
+        cr.MoveTo((width / 2) - (extends.Width / 2), (height / 2) + (extends.Height / 2));
         cr.ShowText($"{value} {Unit}");
 
         return true;
@@ -76,8 +77,14 @@ public class LoadIndicator : Gtk.DrawingArea
     {
         get
         {
-            double t = Math.Max(0, Math.Min(1, (value - minValue) / (maxValue - minValue)));
-            return (255 * t, 255 * (1 - t));
+            // Calculate the percentage
+            double percentage = (value - minValue) / (double)(maxValue - minValue);
+
+            // Interpolate between red and green
+            double r = Math.Min(1.0, 2.0 * percentage);
+            double g = Math.Min(1.0, 2.0 * (1.0 - percentage));
+
+            return (r, g);
         }
     }
 }

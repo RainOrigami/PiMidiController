@@ -1,5 +1,4 @@
-﻿using Hardware.Info;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,10 +8,12 @@ namespace PiControllerShared;
 
 public class SysInfoMessageData : MessageData
 {
-    public SysInfoMessageData(IHardwareInfo hardwareInfo)
+    public SysInfoMessageData(CPUCore[] cpus, MemoryStatus memoryStatus)
     {
-        this.HardwareInfo = hardwareInfo;
+        this.Cpus = cpus;
+        this.MemoryStatus = memoryStatus;
     }
 
-    public IHardwareInfo HardwareInfo { get; }
+    public CPUCore[] Cpus { get; }
+    public MemoryStatus MemoryStatus { get; }
 }
