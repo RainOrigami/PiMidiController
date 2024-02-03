@@ -15,12 +15,15 @@ This program requires a Raspberry Pi with a screen. It is recommended to use a R
 - Customizable min, max and overdrive values for knobs
 - Feedback for knobs
 - Button colors from SysEx midi messages
+- Sys page displaying CPU core load and RAM usage
 
 ## Screenshots
 ![image](https://user-images.githubusercontent.com/51454971/234832611-12c306cf-df48-4dbc-a800-8b2fc50f7815.png)
 ![image](https://user-images.githubusercontent.com/51454971/234832676-b4f0d333-c37a-465c-ae33-a5ee7f98a81b.png)
 ![image](https://user-images.githubusercontent.com/51454971/234832730-2de053ae-4754-4542-b64f-c7bafeb3878c.png)
 ![image](https://user-images.githubusercontent.com/51454971/234833125-b16264b3-a041-4705-824f-93d2ec86b646.png)
+![image](https://github.com/RainOrigami/PiMidiController/assets/51454971/3d853f39-9a10-4fee-941f-b766167dafe5)
+
 
 ## Installation
 
