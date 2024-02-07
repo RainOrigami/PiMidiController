@@ -69,10 +69,19 @@ namespace PiControllerClient
 
             Console.WriteLine("Ready and connecting");
             this.connection = new Connection(host, port);
+            this.connection.Disconnected += this.Connection_Disconnected;
             this.connection.HardwareInfoReceived += this.Connection_HardwareInfoReceived;
             this.connection.PageDefinitionsReceived += this.Connection_PageDefinitionsReceived;
             this.connection.ValueReceived += this.Connection_ValueReceived;
             this.connection.ColorReceived += this.Connection_ColorReceived;
+        }
+
+        private void Connection_Disconnected(object? sender, EventArgs e)
+        {
+            while (notebook.NPages > 0)
+            {
+                notebook.RemovePage(0);
+            }
         }
 
         private void Connection_HardwareInfoReceived(object? sender, (CPUCore[] cpus, MemoryStatus memoryStatus) e)
@@ -224,7 +233,7 @@ namespace PiControllerClient
             int rows = 3;
             int cols = 5;
 
-            Console.WriteLine($"Removing {notebook.NPages} notebook pages...");
+            Console.WriteLine($"Removing {notebook.NPages - 1} notebook pages...");
             while (notebook.NPages > 1)
             {
                 notebook.RemovePage(1);

@@ -1,4 +1,4 @@
-﻿using Gtk;
+using Gtk;
 using Newtonsoft.Json;
 using PiControllerShared;
 using System;
@@ -20,6 +20,7 @@ namespace PiControllerClient
         public event EventHandler<PageDefinition[]>? PageDefinitionsReceived;
         public event EventHandler<(Guid controlId, int value)>? ValueReceived;
         public event EventHandler<(Guid controlId, int red, int green, int blue)>? ColorReceived;
+        public event EventHandler? Disconnected;
 
         public Connection(string host, int port)
         {
@@ -83,14 +84,6 @@ namespace PiControllerClient
                     byte[] buffer = new byte[1024 * 1024 * 52];
                     await stream.ReadAsync(buffer, 0, 4);
                     int frameSize = BitConverter.ToInt32(buffer, 0);
-                    //await Console.Out.WriteLineAsync($"Received frame size: {frameSize}");
-
-                    //if (frameSize == 0)
-                    //{
-                    //    await Console.Out.WriteLineAsync("Lost connection to client");
-                    //    throw new Exception("Lost connection to client");
-                    //}
-
                     int readSize = 0;
 
                     while (readSize < frameSize)
@@ -99,28 +92,10 @@ namespace PiControllerClient
                         {
                             await Task.Delay(100);
                         }
-                        //await Console.Out.WriteLineAsync($"Trying to read {frameSize - readSize} bytes into offset {readSize} for buffer size {buffer.Length} with data available: {stream.DataAvailable}");
                         readSize += await stream.ReadAsync(buffer, readSize, frameSize - readSize);
                     }
 
-                    //if (readSize == 0)
-                    //{
-                    //    await Console.Out.WriteLineAsync("Lost connection to client");
-                    //    throw new Exception("Lost connection to client");
-                    //}
-
-                    //if (readSize < frameSize)
-                    //{
-                    //    await Console.Out.WriteLineAsync($"Invalid data received, expected {frameSize} bytes, got {readSize} bytes");
-                    //    continue;
-                    //}
-
-                    //await Console.Out.WriteLineAsync($"Received {readSize} bytes");
-
                     string receivedData = Encoding.UTF8.GetString(buffer, 0, readSize);
-
-                    //await Console.Out.WriteLineAsync($"Received data: {receivedData}");
-
                     MessageData? messageData = JsonConvert.DeserializeObject<MessageData>(receivedData, new JsonSerializerSettings()
                     {
                         TypeNameHandling = TypeNameHandling.All,
@@ -160,6 +135,7 @@ namespace PiControllerClient
                         this.client.Close();
                     }
                     catch { }
+                    this.Disconnected?.Invoke(this, EventArgs.Empty);
                     await connect();
                 }
             }

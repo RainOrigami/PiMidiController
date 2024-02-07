@@ -1,7 +1,8 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using PiControllerShared;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
@@ -43,6 +44,8 @@ namespace PiControllerServer
         private async Task handleClient(TcpClient client)
         {
             this.connection = client;
+
+            this.messages.Clear();
 
             this.ClientConnected?.Invoke(this, new EventArgs());
             this.stream = client.GetStream();
