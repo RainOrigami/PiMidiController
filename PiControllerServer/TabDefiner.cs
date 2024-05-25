@@ -67,7 +67,7 @@ namespace PiControllerServer
             for (int i = 0; i < this.definition.Controls.Length; i++)
             {
                 this.definition.Controls[i].Index = i;
-                if (this.definition.Controls[i].Note == -1)
+                if (this.definition.Controls[i].Note == -1 && this.definition.Controls[i].ControlType != ControlType.Sound && this.definition.Controls[i].ControlType != ControlType.Macro)
                 {
                     this.definition.Controls[i].Note = this.displays.Length * this.definition.Index + i;
                 }

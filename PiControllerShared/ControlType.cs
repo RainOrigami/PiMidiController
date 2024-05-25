@@ -10,6 +10,8 @@ namespace PiControllerShared
     {
         Blank,
         Button,
-        Knob
+        Knob,
+        Sound,
+        Macro
     }
 }

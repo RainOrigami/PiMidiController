@@ -1,4 +1,6 @@
+using NAudio.CoreAudioApi;
 using NAudio.Midi;
+using NAudio.Wave;
 using Newtonsoft.Json;
 using PiControllerShared;
 using System.Collections.Concurrent;
@@ -6,6 +8,7 @@ using System.ComponentModel;
 using System.Configuration;
 using System.Diagnostics;
 using System.Management;
+using System.Media;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -23,6 +26,7 @@ namespace PiControllerServer
         private List<PageDefinition> definitions;
         private Dictionary<int, MidiEvent> lastEvents = new();
         private Dictionary<int, (int red, int green, int blue)> lastColors = new();
+        private WasapiOut? outputDevice = null;
 
         private Midi midi;
         private Server server;
@@ -171,11 +175,45 @@ namespace PiControllerServer
 
             int index = 0;
 
+            if (outputDevice is not null)
+            {
+                outputDevice.Stop();
+                outputDevice.Dispose();
+                outputDevice = null;
+            }
+
             foreach (TabDefiner tab in this.tabs)
             {
                 PageDefinition definition = tab.GetDefinition();
                 definition.Index = index++;
                 this.definitions.Add(definition);
+
+                foreach (ControlDefinition control in definition.Controls)
+                {
+                    if (control.ControlType == ControlType.Sound)
+                    {
+                        SoundControlDefinition soundControl = (SoundControlDefinition)control;
+                        if (!File.Exists(soundControl.SoundPath))
+                        {
+                            continue;
+                        }
+
+                        if (!soundControl.SoundPath.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+
+                        if (soundPlayers.ContainsKey(soundControl.Id))
+                        {
+                            AudioFileReader currentAudioFile = soundPlayers[soundControl.Id];
+                            soundPlayers.Remove(soundControl.Id);
+                            currentAudioFile.Dispose();
+                        }
+
+                        AudioFileReader newAudioFile = new(soundControl.SoundPath);
+                        soundPlayers.Add(soundControl.Id, newAudioFile);
+                    }
+                }
             }
 
             this.saveDefinitionsToFile(definitionsFileName, this.definitions.ToArray());
@@ -195,6 +233,9 @@ namespace PiControllerServer
                 await relayEvent(lastEvent);
             }
         }
+
+        private bool soundToggled = false;
+        private Guid? currentToggleSound = null;
 
         private void Server_NoteReceived(object? sender, (Guid guid, int value) e)
         {
@@ -220,11 +261,105 @@ namespace PiControllerServer
             {
                 this.midi.SendControlChange(control.Note, e.value);
             }
+            else if (control.ControlType == ControlType.Sound)
+            {
+                SoundControlDefinition soundControl = (SoundControlDefinition)control;
+                string? soundPath = soundControl.SoundPath;
+                if (string.IsNullOrEmpty(soundPath))
+                {
+                    Debug.WriteLine("No sound path defined");
+                    return;
+                }
+
+                if (!File.Exists(soundPath))
+                {
+                    Debug.WriteLine($"Sound file not found: {soundPath}");
+                    return;
+                }
+
+                if (!soundPath.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine("Invalid sound file type");
+                    return;
+                }
+
+                bool toggleOn = soundControl.Toggle && e.value == 127 && !this.soundToggled;
+                bool toggleOff = soundControl.Toggle && e.value == 127 && this.soundToggled;
+
+                if (toggleOn)
+                {
+                    this.soundToggled = true;
+                }
+                else if (toggleOff)
+                {
+                    this.soundToggled = false;
+                }
+
+                if (soundPlayers.ContainsKey(e.guid) && (!soundControl.Toggle || toggleOff || toggleOn))
+                {
+                    this.outputDevice?.Stop();
+                    AudioFileReader currentAudioFile = soundPlayers[e.guid];
+                    currentAudioFile.Seek(0, SeekOrigin.Begin);
+                }
+
+                if (e.value == 0 || toggleOff)
+                {
+                    return;
+                }
+
+                if (!soundPlayers.ContainsKey(e.guid))
+                {
+                    AudioFileReader newAudioFile = new(soundPath);
+                    if (this.outputDevice is not null)
+                    {
+                        this.outputDevice.Stop();
+                        this.outputDevice.Dispose();
+                    }
+                    soundPlayers.Add(e.guid, newAudioFile);
+                }
+
+                if (this.outputDevice is null)
+                {
+                    this.outputDevice = new WasapiOut(AudioClientShareMode.Shared, 0);
+                    this.outputDevice.Init(soundPlayers[e.guid]);
+                }
+                this.outputDevice = new WasapiOut(AudioClientShareMode.Shared, 0);
+                this.outputDevice.Init(soundPlayers[e.guid]);
+
+                this.outputDevice.Play();
+            }
+            else if (control.ControlType == ControlType.Macro)
+            {
+                MacroAction[] macroActions = (control as MacroControlDefinition)?.MacroActions ?? Array.Empty<MacroAction>();
+
+                if (e.value == 0)
+                {
+                    return;
+                }
+
+                Task.Run(() =>
+                {
+                    foreach (MacroAction action in macroActions)
+                    {
+                        if (action is KeyMacroAction keyAction)
+                        {
+                            GlobalHotkeySender.KeyPress(keyAction.Key);
+                            //SendKeys.SendWait(keyAction.Key);
+                        }
+                        else if (action is DelayMacroAction delayAction)
+                        {
+                            Thread.Sleep(delayAction.Delay);
+                        }
+                    }
+                });
+            }
             else
             {
                 Console.WriteLine("Invalid control type to receive data from");
             }
         }
+
+        private Dictionary<Guid, AudioFileReader> soundPlayers = new();
 
         private async void Midi_MidiEventReceived(object? sender, MidiEvent e)
         {
@@ -361,5 +496,42 @@ namespace PiControllerServer
             return new(totalPhysicalMemory, availablePhysicalMemory);
         }
 
+        private void btnUp_Click(object sender, EventArgs e)
+        {
+            if (lbTabs.SelectedItem is not TabDefiner tab)
+            {
+                MessageBox.Show("WTF? :D");
+                return;
+            }
+
+            int index = lbTabs.SelectedIndex;
+            if (index <= 0)
+            {
+                return;
+            }
+
+            tabs.RemoveAt(index);
+            tabs.Insert(index - 1, tab);
+            lbTabs.SelectedIndex = index - 1;
+        }
+
+        private void btnDown_Click(object sender, EventArgs e)
+        {
+            if (lbTabs.SelectedItem is not TabDefiner tab)
+            {
+                MessageBox.Show("WTF? :D");
+                return;
+            }
+
+            int index = lbTabs.SelectedIndex;
+            if (index >= tabs.Count - 1)
+            {
+                return;
+            }
+
+            tabs.RemoveAt(index);
+            tabs.Insert(index + 1, tab);
+            lbTabs.SelectedIndex = index + 1;
+        }
     }
 }

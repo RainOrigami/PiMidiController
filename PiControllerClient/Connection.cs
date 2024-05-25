@@ -103,8 +103,7 @@ namespace PiControllerClient
 
                     if (messageData == null)
                     {
-                        await Console.Out.WriteLineAsync("Received invalid message data");
-                        continue;
+                        throw new Exception("Received invalid message data");
                     }
 
                     switch (messageData)

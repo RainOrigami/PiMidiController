@@ -303,6 +303,35 @@ namespace PiControllerClient
                             button.Released += (sender, args) => OnButtonReleased(controlDefinition.Id);
                             control = button;
                         }
+                        else if (controlDefinition.ControlType == ControlType.Sound && controlDefinition is SoundControlDefinition soundControlDefinition)
+                        {
+                            Button button = new Button();
+                            DynamicSizeLabel label = new DynamicSizeLabel(soundControlDefinition.Label)
+                            {
+                                MaximumFontSize = 36
+                            };
+                            button.Add(label);
+                            label.Show();
+
+                            button.StyleContext.AddClass($"note-{controlDefinition.Note}");
+                            button.Pressed += (sender, args) => OnButtonPressed(controlDefinition.Id);
+                            button.Released += (sender, args) => OnButtonReleased(controlDefinition.Id);
+                            control = button;
+                        } else if (controlDefinition.ControlType == ControlType.Macro && controlDefinition is MacroControlDefinition macroControlDefinition)
+                        {
+                            Button button = new Button();
+                            DynamicSizeLabel label = new DynamicSizeLabel(macroControlDefinition.Label)
+                            {
+                                MaximumFontSize = 36
+                            };
+                            button.Add(label);
+                            label.Show();
+
+                            button.StyleContext.AddClass($"note-{controlDefinition.Note}");
+                            button.Pressed += (sender, args) => OnButtonPressed(controlDefinition.Id);
+                            button.Released += (sender, args) => OnButtonReleased(controlDefinition.Id);
+                            control = button;
+                        }
 
                         if (control != null)
                         {

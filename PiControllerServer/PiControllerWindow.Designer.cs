@@ -35,6 +35,8 @@
             this.exitToolStripMenuItem = new ToolStripMenuItem();
             this.notifyIcon = new NotifyIcon(this.components);
             this.scDefiners = new SplitContainer();
+            this.btnDown = new Button();
+            this.btnUp = new Button();
             this.btnSave = new Button();
             this.lbTabs = new ListBox();
             this.txtTabName = new TextBox();
@@ -84,6 +86,8 @@
             // 
             // scDefiners.Panel1
             // 
+            this.scDefiners.Panel1.Controls.Add(this.btnDown);
+            this.scDefiners.Panel1.Controls.Add(this.btnUp);
             this.scDefiners.Panel1.Controls.Add(this.btnSave);
             this.scDefiners.Panel1.Controls.Add(this.lbTabs);
             this.scDefiners.Panel1.Controls.Add(this.txtTabName);
@@ -92,6 +96,26 @@
             this.scDefiners.Size = new Size(1082, 248);
             this.scDefiners.SplitterDistance = 319;
             this.scDefiners.TabIndex = 1;
+            // 
+            // btnDown
+            // 
+            this.btnDown.Location = new Point(241, 207);
+            this.btnDown.Name = "btnDown";
+            this.btnDown.Size = new Size(75, 23);
+            this.btnDown.TabIndex = 6;
+            this.btnDown.Text = "Down";
+            this.btnDown.UseVisualStyleBackColor = true;
+            this.btnDown.Click += this.btnDown_Click;
+            // 
+            // btnUp
+            // 
+            this.btnUp.Location = new Point(160, 207);
+            this.btnUp.Name = "btnUp";
+            this.btnUp.Size = new Size(75, 23);
+            this.btnUp.TabIndex = 5;
+            this.btnUp.Text = "Up";
+            this.btnUp.UseVisualStyleBackColor = true;
+            this.btnUp.Click += this.btnUp_Click;
             // 
             // btnSave
             // 
@@ -175,5 +199,7 @@
         private Button btnRemoveTab;
         private Button btnAddTab;
         private Button btnSave;
+        private Button btnDown;
+        private Button btnUp;
     }
 }
