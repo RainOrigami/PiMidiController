@@ -1,3 +1,9 @@
+# Orphaned
+
+This tool is no longer developed or supported by me, sorry. There are alternatives (try Open Stage Control).
+
+Because I have switched off Windows completely, I no longer require these Windows audio tools. Intead I use pipewire and its supporting tools to accomplish more than I ever could on Windows.
+
 # Pi Midi Controller (for VoiceMeeter)
 
 This is a simple midi controller for the Raspberry Pi. It is designed to be used with VoiceMeeter on Windows.
